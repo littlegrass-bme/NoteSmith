@@ -77,6 +77,29 @@ Clean Study Notes
 
 ---
 
+# 📚 Note Templates ｜ 笔记模板体系
+
+NoteSmith includes a lightweight template system for academic note organization.  
+NoteSmith 内置了一套轻量级课程笔记整理模板，用于规范转录文本的筛选、结构化与导出效果。
+
+It focuses on:  
+主要包括：
+
+- Filtering out classroom noise ｜ 过滤课堂组织语言、重复口头禅和无效互动
+- Preserving meaningful content ｜ 保留分析、观点、背景说明和词句赏析
+- Academic rewriting ｜ 将口语化转录改写为更清晰的书面表达
+- Topic-based structure ｜ 按主题重组零散内容
+- Markdown formatting ｜ 输出结构清晰的 Markdown 笔记
+- Styled export ｜ 支持进一步渲染为更美观的 PDF / DOCX 文件
+
+For formatting, the project follows a course-note style guide, including heading levels, paragraph spacing, blockquotes, tables, page margins and PDF layout.  
+在格式方面，项目参考了课程笔记规范，包括标题层级、段落间距、引用块、表格、页边距和 PDF 排版等内容。
+
+Users can directly modify the built-in prompts or add custom requirements in the web interface to fit different courses, meetings and note styles.  
+用户可以直接修改内置 Prompt，也可以在网页预留区域添加自己的整理要求，以适配不同课程、会议和笔记风格。
+
+---
+
 # ⚙️ Tech Stack ｜ 技术栈
 
 ```text
