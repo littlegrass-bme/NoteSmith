@@ -1,17 +1,19 @@
-# ✨ NoteSmith
-
 <div align="center">
+
+<img src="./assets/notesmith-banner.png" alt="NoteSmith Banner" width="100%" />
+
+# ✨ NoteSmith
 
 ### 🧠 AI-Powered Note Workspace ｜ AI 智能笔记工作台
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python" />
-  <img src="https://img.shields.io/badge/LLM-Powered-purple?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Markdown-Ready-green?style=for-the-badge&logo=markdown" />
-  <img src="https://img.shields.io/badge/License-MIT-orange?style=for-the-badge" />
+<p>
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/LLM-Powered-8A2BE2?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Markdown-Ready-2EA44F?style=for-the-badge&logo=markdown&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-MIT-F97316?style=for-the-badge" />
 </p>
 
-<p align="center">
+<p>
 Turn messy transcripts into clean and structured notes.
 <br>
 将杂乱课堂记录自动整理为清晰、结构化的学习笔记。
