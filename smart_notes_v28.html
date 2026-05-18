@@ -199,6 +199,36 @@
         return headers;
     }
 
+    function normalizePageSettings() {
+        const minInput = document.getElementById('min-pages');
+        const maxInput = document.getElementById('max-pages');
+        let minPages = Number.parseInt(minInput.value, 10);
+        let maxPages = Number.parseInt(maxInput.value, 10);
+
+        if (!Number.isFinite(minPages) || minPages < 1) minPages = 1;
+        if (!Number.isFinite(maxPages) || maxPages < 1) maxPages = minPages;
+        if (minPages > maxPages) [minPages, maxPages] = [maxPages, minPages];
+
+        minInput.value = minPages;
+        maxInput.value = maxPages;
+
+        return {
+            minPages,
+            maxPages,
+            minWords: minPages * WORDS_PER_PAGE,
+            maxWords: maxPages * WORDS_PER_PAGE,
+            targetWords: Math.round(((minPages + maxPages) / 2) * WORDS_PER_PAGE)
+        };
+    }
+
+    function estimateMaxTokens(maxWords) {
+        return Math.min(16000, Math.max(1200, Math.ceil(maxWords * 1.8) + 800));
+    }
+
+    function escapeRegExp(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
     // 预处理输入：清理不可见字符
     function preprocessInputText(text) {
         return text.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
@@ -207,6 +237,9 @@
     // 后处理输出：增强 Markdown 渲染效果
     function postprocessOutputText(text) {
         let processed = text;
+
+        // 0. 移除模型偶尔包裹的 Markdown 代码块外壳
+        processed = processed.replace(/^```(?:markdown|md)?\s*/i, '').replace(/\s*```\s*$/i, '');
         
         // 1. 移除 AI 可能带入的引用标记
         processed = processed.replace(/\[cite[^\]]*\]/g, '');
@@ -228,6 +261,28 @@
         processed = processed.replace(/(\|.*?\|)\n\s*\n/g, '$1\n');
         
         return processed;
+    }
+
+    function ensureDocumentHeader(text, courseName, fallbackTopic) {
+        let processed = text.replace(/^\s+/, '');
+        if (!courseName) return processed;
+
+        const expectedHeader = `# ${courseName} - 课堂笔记`;
+        const firstLine = processed.split(/\r?\n/, 1)[0]?.trim() || '';
+        const exactHeaderPattern = new RegExp(`^#\\s*${escapeRegExp(courseName)}\\s*-\\s*课堂笔记\\s*$`);
+
+        if (exactHeaderPattern.test(firstLine)) return processed;
+
+        const lines = processed.split(/\r?\n/);
+        if (/^#\s+.+/.test(firstLine) || /^<h1\b[^>]*>.*<\/h1>\s*$/i.test(firstLine)) lines.shift();
+
+        return [
+            expectedHeader,
+            `整理主题: ${fallbackTopic || '课堂内容整理'}`,
+            '状态: 已校对',
+            '',
+            lines.join('\n').replace(/^\s+/, '')
+        ].join('\n');
     }
 
     window.onload = () => {
@@ -302,13 +357,12 @@
         const modelName = document.getElementById('model-select').value;
         const domain = document.getElementById('domain-select').value;
         const courseName = document.getElementById('course-name').value.trim();
-        const custom = document.getElementById('custom-req').value;
-        const minW = document.getElementById('min-pages').value * WORDS_PER_PAGE;
-        const maxW = document.getElementById('max-pages').value * WORDS_PER_PAGE;
+        const custom = document.getElementById('custom-req').value.trim();
+        const pageSettings = normalizePageSettings();
 
         if (!fileContent || (!USING_LOCAL_PROXY && !apiKey)) { alert("请确保已设置 API Key 并上传文件"); return; }
         document.getElementById('generate-btn').disabled = true;
-        updateProgress(5, `正在按学术标准整理${domain}内容...`);
+        updateProgress(5, `正在按学术标准整理${domain}内容，目标约 ${pageSettings.targetWords} 字...`);
 
         const preprocessedContent = preprocessInputText(fileContent);
 
@@ -340,10 +394,17 @@ Task: Transform the following lecture transcript into high-quality, structured a
 
 5. DOCUMENT HEADER:
    - Start with a clear header: "# ${courseName || '[自动生成课程名称]'} - 课堂笔记" followed by "整理主题: [Topic]" and "状态: 已校对".
+   - If a course name is provided, the first line of the answer MUST be exactly: "# ${courseName || '[自动生成课程名称]'} - 课堂笔记".
    - If course name is not provided or is empty, analyze the transcript content to generate a comprehensive, descriptive title that accurately reflects the core theme of the content, not just limited to course name.
 
-6. WORD LIMIT: Total output between ${minW} and ${maxW} words.
-7. CUSTOM REQUEST: ${custom || "None"}
+6. LENGTH CONTROL:
+   - Total output MUST be between ${pageSettings.minWords} and ${pageSettings.maxWords} Chinese characters/words.
+   - Target length is approximately ${pageSettings.targetWords} Chinese characters/words.
+   - If content is too long, prioritize teacher details, concrete examples, numerical values, cases, and key terminology; compress transitions and repetition first.
+   - Do not exceed ${pageSettings.maxPages} pages at 500 Chinese characters/words per page.
+
+7. USER EXTRA INSTRUCTIONS:
+${custom ? custom.split('\n').map(line => `   - ${line}`).join('\n') : '   - None'}
 
 8. PRESERVE TEACHER DETAILS:
    - 尽最大努力保留并复现讲师在课堂中提到的所有要点、具体示例、数值、案例与关键术语。
@@ -365,7 +426,18 @@ ${preprocessedContent.substring(0, 1000000)}
             const response = await fetch(`${CONFIG_API_BASE_URL}/chat/completions`, {
                 method: 'POST',
                 headers: getApiHeaders(apiKey),
-                body: JSON.stringify({ model: modelToUse, messages: [{ role: 'user', content: prompt }], stream: false })
+                body: JSON.stringify({
+                    model: modelToUse,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a careful academic note editor. Follow the user-provided course name, custom instructions, and length constraints exactly.'
+                        },
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: estimateMaxTokens(pageSettings.maxWords),
+                    stream: false
+                })
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error?.message || `HTTP ${response.status}`);
@@ -380,7 +452,7 @@ ${preprocessedContent.substring(0, 1000000)}
                 else if (choice.delta && choice.delta.content) rawOutput = choice.delta.content;
             }
             if (!rawOutput) throw new Error('未收到有效的模型输出');
-             finalMarkdown = postprocessOutputText(rawOutput);
+            finalMarkdown = ensureDocumentHeader(postprocessOutputText(rawOutput), courseName, domain);
 
             // 渲染内容
             document.getElementById('content-display').innerHTML = marked.parse(finalMarkdown);
