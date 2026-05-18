@@ -148,8 +148,3 @@ MIT License
 
 ### ⭐ 如果你喜欢这个项目，欢迎 Star。
 
-</div>
-=======
-# NoteSmith
-AI-powered note refinement workspace
->>>>>>> b899f9a7316014d406d46d889f5afe71e254c986
