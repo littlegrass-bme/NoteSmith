@@ -90,7 +90,7 @@ It focuses on:
 - Academic rewriting ｜ 将口语化转录改写为更清晰的书面表达
 - Topic-based structure ｜ 按主题重组零散内容
 - Markdown formatting ｜ 输出结构清晰的 Markdown 笔记
-- Styled export ｜ 支持进一步渲染为更美观的 PDF / DOCX 文件
+- Styled export ｜ 支持进一步渲染为 PDF / Word 文件
 
 For formatting, the project follows a course-note style guide, including heading levels, paragraph spacing, blockquotes, tables, page margins and PDF layout.  
 在格式方面，项目参考了课程笔记规范，包括标题层级、段落间距、引用块、表格、页边距和 PDF 排版等内容。
@@ -115,13 +115,15 @@ Prompt Engineering
 
 ### 1️⃣ Configure API ｜ 配置 API
 
-在 `config.json` 中填入自己的：
+在 `config.js` 中填入自己的：
 
 * API Key
 * API URL
-* 模型名称
 
-并根据指引填写课程 / 会议相关信息。
+并根据指引在页面中选择模型、填写课程 / 会议相关信息。
+
+NoteSmith uses OpenAI-compatible endpoints, so you may use your own compatible provider. [OrcaRouter](https://www.orcarouter.ai/) is also supported as an optional provider; set `apiBaseUrl` to `https://api.orcarouter.ai/v1` and use your own OrcaRouter API key.  
+NoteSmith 使用 OpenAI-compatible 接口，因此可以自行配置兼容服务商。也可选择使用 [OrcaRouter](https://www.orcarouter.ai/)；将 `apiBaseUrl` 设置为 `https://api.orcarouter.ai/v1`，并填写自己的 OrcaRouter API Key 即可。
 
 如有需要，也可以自行添加特殊 Prompt 来满足个性化整理需求。
 
@@ -130,8 +132,10 @@ Prompt Engineering
 ### 2️⃣ Run ｜ 运行项目
 
 ```bash
-python main.py
+python smart_notes_server.py
 ```
+
+然后在浏览器打开终端显示的本地地址。
 
 ---
 
@@ -139,7 +143,7 @@ python main.py
 
 整理完成后可导出：
 
-* DOCX
+* Word (.doc)
 * Markdown
 * PDF
 
@@ -149,6 +153,16 @@ python main.py
 如需严格控制篇幅，请自行输入额外 Prompt。
 
 最终效果会因用户选择的模型不同而存在差异。
+
+---
+
+# 🔌 Third-Party API Services ｜ 第三方 API 服务
+
+Third-party AI API providers are optional and are selected and configured by the user. Requests, billing, service availability, model behavior and data processing are subject to the selected provider's services and policies. NoteSmith does not operate those third-party services or manage users' provider accounts.  
+第三方 AI API 服务均为可选项，由用户自行选择并配置。相关请求处理、计费、服务可用性、模型行为及数据处理规则以所选服务商的服务与政策为准；NoteSmith 本身不运营这些第三方服务，也不管理用户在第三方服务商处的账户。
+
+Please avoid submitting sensitive or confidential material unless you have reviewed the policies of your selected provider and any relevant upstream model provider.  
+对于敏感或保密内容，请在确认所选 API 服务商及相关上游模型服务商的数据处理规则后再决定是否提交。
 
 ---
 
