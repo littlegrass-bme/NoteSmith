@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 课堂笔记整理台 - V28.0 (专业学术版)</title>
+    <title>AI 课堂笔记整理台 - V28.1 DeepSeek版</title>
     <!-- 引入配置文件 -->
     <script src="config.js"></script>
     <!-- 引入核心库 -->
@@ -108,13 +108,16 @@
 <body>
 
 <div class="sidebar">
-    <div style="font-size: 22px; font-weight: 800; color: var(--primary-color); margin-bottom: 10px; letter-spacing: 1px;">📚 AI 笔记台 V28.0</div>
+    <div style="font-size: 22px; font-weight: 800; color: var(--primary-color); margin-bottom: 10px; letter-spacing: 1px;">📚 AI 笔记台 V28.1 · DeepSeek</div>
     <div style="font-size: 12px; color: #888; margin-bottom: 15px;">专业学术排版 & 严谨逻辑整理</div>
     
     <div class="control-group">
         <label>🔑 1. API 设置</label>
-        <input type="password" id="api-key" placeholder="粘贴 API Key" onblur="handleApiKeyBlur()">
-        <select id="model-select"></select>
+        <input type="password" id="api-key" placeholder="粘贴 DeepSeek API Key" onblur="handleApiKeyBlur()">
+        <select id="model-select">
+            <option value="deepseek-flash" selected>deepseek-flash</option>
+            <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+        </select>
     </div>
 
     <div class="control-group">
@@ -174,7 +177,7 @@
             <p>请在左侧上传您的课堂转录文本或录音文稿，点击“开始专业整理”即可获得排版精美的学术笔记。</p>
             <hr>
             <blockquote>
-                <p><strong>版本更新说明 (V28.0)：</strong><br>
+                <p><strong>版本更新说明 (V28.1 DeepSeek)：</strong><br>
                 1. <strong>渲染引擎重构</strong>：支持 HTML 混合渲染，完美呈现颜色标题。<br>
                 2. <strong>表格规范化</strong>：移除不规范的“模拟空行”，采用标准严谨的学术表格结构。<br>
                 3. <strong>视觉增强</strong>：集成 GitHub Markdown 样式基准，优化 PDF 导出清晰度。</p>
@@ -190,7 +193,7 @@
     let progressTimer = null;
     const WORDS_PER_PAGE = 500;
     const CONFIG_API_KEY = (typeof SMART_NOTES_CONFIG !== 'undefined' && SMART_NOTES_CONFIG.apiKey) ? SMART_NOTES_CONFIG.apiKey : "";
-    const CONFIG_API_BASE_URL = (typeof SMART_NOTES_CONFIG !== 'undefined' && SMART_NOTES_CONFIG.apiBaseUrl) ? SMART_NOTES_CONFIG.apiBaseUrl : "https://api.deepseek.com";
+    const CONFIG_API_BASE_URL = ((typeof SMART_NOTES_CONFIG !== 'undefined' && SMART_NOTES_CONFIG.apiBaseUrl) ? SMART_NOTES_CONFIG.apiBaseUrl : "https://api.deepseek.com").replace(/\/+$/, '');
     const USING_LOCAL_PROXY = CONFIG_API_BASE_URL.startsWith("/");
 
     function getApiHeaders(apiKey) {
@@ -199,34 +202,11 @@
         return headers;
     }
 
-    function normalizePageSettings() {
-        const minInput = document.getElementById('min-pages');
-        const maxInput = document.getElementById('max-pages');
-        let minPages = Number.parseInt(minInput.value, 10);
-        let maxPages = Number.parseInt(maxInput.value, 10);
-
-        if (!Number.isFinite(minPages) || minPages < 1) minPages = 1;
-        if (!Number.isFinite(maxPages) || maxPages < 1) maxPages = minPages;
-        if (minPages > maxPages) [minPages, maxPages] = [maxPages, minPages];
-
-        minInput.value = minPages;
-        maxInput.value = maxPages;
-
-        return {
-            minPages,
-            maxPages,
-            minWords: minPages * WORDS_PER_PAGE,
-            maxWords: maxPages * WORDS_PER_PAGE,
-            targetWords: Math.round(((minPages + maxPages) / 2) * WORDS_PER_PAGE)
-        };
-    }
-
-    function estimateMaxTokens(maxWords) {
-        return Math.min(16000, Math.max(1200, Math.ceil(maxWords * 1.8) + 800));
-    }
-
-    function escapeRegExp(value) {
-        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    function setDeepSeekFallbackModels() {
+        const select = document.getElementById('model-select');
+        select.innerHTML = '';
+        select.add(new Option('deepseek-flash', 'deepseek-flash', true, true));
+        select.add(new Option('deepseek-v4-pro', 'deepseek-v4-pro'));
     }
 
     // 预处理输入：清理不可见字符
@@ -237,9 +217,6 @@
     // 后处理输出：增强 Markdown 渲染效果
     function postprocessOutputText(text) {
         let processed = text;
-
-        // 0. 移除模型偶尔包裹的 Markdown 代码块外壳
-        processed = processed.replace(/^```(?:markdown|md)?\s*/i, '').replace(/\s*```\s*$/i, '');
         
         // 1. 移除 AI 可能带入的引用标记
         processed = processed.replace(/\[cite[^\]]*\]/g, '');
@@ -263,37 +240,18 @@
         return processed;
     }
 
-    function ensureDocumentHeader(text, courseName, fallbackTopic) {
-        let processed = text.replace(/^\s+/, '');
-        if (!courseName) return processed;
-
-        const expectedHeader = `# ${courseName} - 课堂笔记`;
-        const firstLine = processed.split(/\r?\n/, 1)[0]?.trim() || '';
-        const exactHeaderPattern = new RegExp(`^#\\s*${escapeRegExp(courseName)}\\s*-\\s*课堂笔记\\s*$`);
-
-        if (exactHeaderPattern.test(firstLine)) return processed;
-
-        const lines = processed.split(/\r?\n/);
-        if (/^#\s+.+/.test(firstLine) || /^<h1\b[^>]*>.*<\/h1>\s*$/i.test(firstLine)) lines.shift();
-
-        return [
-            expectedHeader,
-            `整理主题: ${fallbackTopic || '课堂内容整理'}`,
-            '状态: 已校对',
-            '',
-            lines.join('\n').replace(/^\s+/, '')
-        ].join('\n');
-    }
-
     window.onload = () => {
         marked.setOptions({
             breaks: true,
             gfm: true,
             headerIds: true,
-            mangle: false,
+            mangle: false, // 允许 HTML 标签渲染
             sanitize: false,
             smartLists: true
         });
+
+        // 保留原项目的 config.js 自动读取逻辑。
+        // 使用 smart_notes_server.py 时，浏览器端会收到 apiBaseUrl=/v1，真实 Key 由本地代理持有。
         if (USING_LOCAL_PROXY) {
             document.getElementById('api-key').placeholder = "本地代理已读取 config.js";
             autoLoadModels();
@@ -304,6 +262,8 @@
     };
 
     function handleApiKeyBlur() {
+        const key = document.getElementById('api-key').value.trim();
+        if (key.length >= 10) showStatus("API Key 已就绪，正在读取模型列表", "success");
         autoLoadModels();
     }
 
@@ -311,40 +271,58 @@
         const apiKey = document.getElementById('api-key').value.trim();
         const select = document.getElementById('model-select');
         if (!USING_LOCAL_PROXY && (!apiKey || apiKey.length < 10)) return;
-        select.innerHTML = '<option>模型加载中...</option>';
+
+        const previousModel = select.value;
+        select.innerHTML = '<option value="">模型加载中...</option>';
+
         try {
-            // 使用 DeepSeek 官方 base_url 并通过 Bearer Token 授权
-            const res = await fetch(`${CONFIG_API_BASE_URL}/models`, {
+            const response = await fetch(`${CONFIG_API_BASE_URL}/models`, {
                 headers: getApiHeaders(apiKey)
             });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error(data.error?.message || `HTTP ${res.status}`);
+            const data = await response.json();
+            if (!response.ok || data.error) {
+                throw new Error(data?.error?.message || data?.message || `HTTP ${response.status}`);
+            }
+
+            const models = Array.isArray(data.data) ? data.data
+                : Array.isArray(data.models) ? data.models
+                : Array.isArray(data) ? data
+                : [];
+
             select.innerHTML = '';
+            for (const model of models) {
+                const id = typeof model === 'string' ? model : (model?.id || model?.name || '');
+                if (!id) continue;
+                select.add(new Option(model?.display_name || model?.displayName || id, id));
+            }
 
-            // 兼容 Deepseek 及常见返回格式：优先使用 data.data 或 data.models，其次尝试顶层数组
-            let modelsList = [];
-            if (Array.isArray(data.data)) modelsList = data.data;
-            else if (Array.isArray(data.models)) modelsList = data.models;
-            else if (Array.isArray(data)) modelsList = data;
-
-            modelsList.filter(m => {
-                if (!m) return false;
-                // DeepSeek/OpenAI 兼容模型对象可能不包含 supportedGenerationMethods
-                if (Array.isArray(m.supportedGenerationMethods)) return m.supportedGenerationMethods.includes("generateContent");
-                return true;
-            }).forEach(m => {
-                const name = (m.id || m.name || '').replace('models/', '');
-                select.add(new Option(m.display_name || m.displayName || name || JSON.stringify(m).slice(0, 40), name));
-            });
-
-            if (select.options.length === 0) select.innerHTML = '<option>未找到模型</option>';
-        } catch(e) { showStatus(`API 错误: ${e.message}`, "error"); }
+            if (select.options.length === 0) {
+                setDeepSeekFallbackModels();
+            } else if ([...select.options].some(option => option.value === previousModel)) {
+                select.value = previousModel;
+            } else if ([...select.options].some(option => option.value === 'deepseek-flash')) {
+                select.value = 'deepseek-flash';
+            }
+        } catch (error) {
+            setDeepSeekFallbackModels();
+            showStatus(`模型列表读取失败：${error.message}。已保留 DeepSeek 默认模型，可继续尝试。`, "error");
+        }
     }
 
     document.getElementById('file-input').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if(!file) return;
         originalFileName = file.name.replace(/\.[^/.]+$/, "");
+
+        // 形如 2026-09-14_医学统计与数据分析.txt：自动取第一个下划线后的内容作为课程名称。
+        const underscoreIndex = originalFileName.indexOf('_');
+        if (underscoreIndex >= 0 && underscoreIndex < originalFileName.length - 1) {
+            const inferredCourseName = originalFileName.slice(underscoreIndex + 1).trim();
+            if (inferredCourseName) {
+                document.getElementById('course-name').value = inferredCourseName;
+            }
+        }
+
         if (file.name.endsWith('.docx')) {
             const res = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
             fileContent = res.value;
@@ -357,12 +335,13 @@
         const modelName = document.getElementById('model-select').value;
         const domain = document.getElementById('domain-select').value;
         const courseName = document.getElementById('course-name').value.trim();
-        const custom = document.getElementById('custom-req').value.trim();
-        const pageSettings = normalizePageSettings();
+        const custom = document.getElementById('custom-req').value;
+        const minW = document.getElementById('min-pages').value * WORDS_PER_PAGE;
+        const maxW = document.getElementById('max-pages').value * WORDS_PER_PAGE;
 
         if (!fileContent || (!USING_LOCAL_PROXY && !apiKey)) { alert("请确保已设置 API Key 并上传文件"); return; }
         document.getElementById('generate-btn').disabled = true;
-        updateProgress(5, `正在按学术标准整理${domain}内容，目标约 ${pageSettings.targetWords} 字...`);
+        updateProgress(5, `正在按学术标准整理${domain}内容...`);
 
         const preprocessedContent = preprocessInputText(fileContent);
 
@@ -394,22 +373,10 @@ Task: Transform the following lecture transcript into high-quality, structured a
 
 5. DOCUMENT HEADER:
    - Start with a clear header: "# ${courseName || '[自动生成课程名称]'} - 课堂笔记" followed by "整理主题: [Topic]" and "状态: 已校对".
-   - If a course name is provided, the first line of the answer MUST be exactly: "# ${courseName || '[自动生成课程名称]'} - 课堂笔记".
    - If course name is not provided or is empty, analyze the transcript content to generate a comprehensive, descriptive title that accurately reflects the core theme of the content, not just limited to course name.
 
-6. LENGTH CONTROL:
-   - Total output MUST be between ${pageSettings.minWords} and ${pageSettings.maxWords} Chinese characters/words.
-   - Target length is approximately ${pageSettings.targetWords} Chinese characters/words.
-   - If content is too long, prioritize teacher details, concrete examples, numerical values, cases, and key terminology; compress transitions and repetition first.
-   - Do not exceed ${pageSettings.maxPages} pages at 500 Chinese characters/words per page.
-
-7. USER EXTRA INSTRUCTIONS:
-${custom ? custom.split('\n').map(line => `   - ${line}`).join('\n') : '   - None'}
-
-8. PRESERVE TEACHER DETAILS:
-   - 尽最大努力保留并复现讲师在课堂中提到的所有要点、具体示例、数值、案例与关键术语。
-   - 对于举例与案例，应完整呈现原意；若需要简化或整合，务必在括号中标注已作的简化并保留原始信息要点。
-   - 若某处无法准确重现原文细节，需在笔记末尾列出“可疑/省略内容”并说明原因。
+6. WORD LIMIT: Total output between ${minW} and ${maxW} words.
+7. CUSTOM REQUEST: ${custom || "None"}
 
 [TRANSCRIPT DATA]:
 ${preprocessedContent.substring(0, 1000000)}
@@ -421,39 +388,54 @@ ${preprocessedContent.substring(0, 1000000)}
         }, 1000);
 
         try {
-            // 使用 DeepSeek 的 Chat Completions 接口（与 OpenAI 兼容）
-            const modelToUse = modelName || 'deepseek-chat';
             const response = await fetch(`${CONFIG_API_BASE_URL}/chat/completions`, {
                 method: 'POST',
                 headers: getApiHeaders(apiKey),
                 body: JSON.stringify({
-                    model: modelToUse,
+                    model: modelName,
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are a careful academic note editor. Follow the user-provided course name, custom instructions, and length constraints exactly.'
+                            content: 'You are a senior academic expert and professional medical document editor. Return only the final structured notes requested by the user.'
                         },
-                        { role: 'user', content: prompt }
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
                     ],
-                    max_tokens: estimateMaxTokens(pageSettings.maxWords),
-                    stream: false
+                    thinking: { type: 'disabled' },
+                    stream: false,
+                    max_tokens: 12000
                 })
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error?.message || `HTTP ${response.status}`);
-            if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
-            // 兼容多种返回格式，优先取 choices[0].message.content 或 choices[0].text
-            let rawOutput = '';
-            if (Array.isArray(data.choices) && data.choices.length > 0) {
-                const choice = data.choices[0];
-                if (choice.message && (choice.message.content || choice.message.role)) rawOutput = choice.message.content || '';
-                else if (choice.text) rawOutput = choice.text;
-                else if (choice.delta && choice.delta.content) rawOutput = choice.delta.content;
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                const raw = await response.text().catch(() => '');
+                throw new Error(`DeepSeek 返回了无法解析的响应（HTTP ${response.status}）。${raw.slice(0, 300)}`);
             }
-            if (!rawOutput) throw new Error('未收到有效的模型输出');
-            finalMarkdown = ensureDocumentHeader(postprocessOutputText(rawOutput), courseName, domain);
 
+            console.log('DeepSeek 原始响应：', data);
+
+            if (!response.ok || data.error) {
+                const msg = data?.error?.message || data?.message || `HTTP ${response.status}`;
+                throw new Error(`DeepSeek API 错误：${msg}`);
+            }
+
+            const choice = data?.choices?.[0];
+            const messageContent = choice?.message?.content;
+            const rawOutput = (typeof messageContent === 'string' ? messageContent : choice?.text || '').trim();
+
+            if (!rawOutput) {
+                const reason = choice?.finish_reason || '未知';
+                const details = JSON.stringify(data).slice(0, 1200);
+                throw new Error(`未收到有效的模型文本。finish_reason=${reason}。请按 F12 查看 Console 中的“DeepSeek 原始响应”。响应摘要：${details}`);
+            }
+
+            finalMarkdown = postprocessOutputText(rawOutput);
+            
             // 渲染内容
             document.getElementById('content-display').innerHTML = marked.parse(finalMarkdown);
             
@@ -461,8 +443,9 @@ ${preprocessedContent.substring(0, 1000000)}
             ['btn-md', 'btn-word', 'btn-pdf'].forEach(id => document.getElementById(id).disabled = false);
             finishProgress("✅ 整理完成，请查看预览");
         } catch (e) { 
+            console.error('整理失败：', e);
             finishProgress("❌ 整理失败", true); 
-            showStatus(e.message, "error"); 
+            showStatus(e.message || String(e), "error"); 
         } finally { 
             document.getElementById('generate-btn').disabled = false; 
         }
