@@ -120,10 +120,7 @@ Prompt Engineering
 * API Key
 * API URL
 
-并根据指引在页面中选择模型、填写课程 / 会议相关信息。
-
-NoteSmith uses OpenAI-compatible endpoints, so you may use your own compatible provider. [OrcaRouter](https://www.orcarouter.ai/) is also supported as an optional provider; set `apiBaseUrl` to `https://api.orcarouter.ai/v1` and use your own OrcaRouter API key.  
-NoteSmith 使用 OpenAI-compatible 接口，因此可以自行配置兼容服务商。也可选择使用 [OrcaRouter](https://www.orcarouter.ai/)；将 `apiBaseUrl` 设置为 `https://api.orcarouter.ai/v1`，并填写自己的 OrcaRouter API Key 即可。
+并根据指引填写课程 / 会议相关信息。
 
 如有需要，也可以自行添加特殊 Prompt 来满足个性化整理需求。
 
@@ -152,17 +149,17 @@ python smart_notes_server.py
 ⚠️ 页数仅作为参考。
 如需严格控制篇幅，请自行输入额外 Prompt。
 
-最终效果会因用户选择的模型不同而存在差异。
+最终效果会因输入内容和整理要求不同而存在差异。
 
 ---
 
-# 🔌 Third-Party API Services ｜ 第三方 API 服务
+# 🔌 API Service Notice ｜ API 服务说明
 
-Third-party AI API providers are optional and are selected and configured by the user. Requests, billing, service availability, model behavior and data processing are subject to the selected provider's services and policies. NoteSmith does not operate those third-party services or manage users' provider accounts.  
-第三方 AI API 服务均为可选项，由用户自行选择并配置。相关请求处理、计费、服务可用性、模型行为及数据处理规则以所选服务商的服务与政策为准；NoteSmith 本身不运营这些第三方服务，也不管理用户在第三方服务商处的账户。
+Requests, billing, service availability, and data processing are governed by the API service configured by the user. NoteSmith does not operate external AI services or manage external service accounts.  
+相关请求处理、计费、服务可用性与数据处理规则以用户配置的 API 服务为准；NoteSmith 本身不运营外部 AI 服务，也不管理外部服务账户。
 
-Please avoid submitting sensitive or confidential material unless you have reviewed the policies of your selected provider and any relevant upstream model provider.  
-对于敏感或保密内容，请在确认所选 API 服务商及相关上游模型服务商的数据处理规则后再决定是否提交。
+Please avoid submitting sensitive or confidential material before confirming the data processing policies of your configured API service.  
+对于敏感或保密内容，请在确认已配置 API 服务的数据处理规则后再决定是否提交。
 
 ---
 
@@ -184,4 +181,3 @@ MIT License
 ### ⭐ Star this project if you like it.
 
 ### ⭐ 如果你喜欢这个项目，欢迎 Star。
-

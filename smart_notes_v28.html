@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 课堂笔记整理台 - V28.1 DeepSeek版</title>
+    <title>AI 课堂笔记整理台 - V28.1</title>
     <!-- 引入配置文件 -->
     <script src="config.js"></script>
     <!-- 引入核心库 -->
@@ -108,16 +108,12 @@
 <body>
 
 <div class="sidebar">
-    <div style="font-size: 22px; font-weight: 800; color: var(--primary-color); margin-bottom: 10px; letter-spacing: 1px;">📚 AI 笔记台 V28.1 · DeepSeek</div>
+    <div style="font-size: 22px; font-weight: 800; color: var(--primary-color); margin-bottom: 10px; letter-spacing: 1px;">📚 AI 笔记台 V28.1</div>
     <div style="font-size: 12px; color: #888; margin-bottom: 15px;">专业学术排版 & 严谨逻辑整理</div>
     
     <div class="control-group">
         <label>🔑 1. API 设置</label>
-        <input type="password" id="api-key" placeholder="粘贴 DeepSeek API Key" onblur="handleApiKeyBlur()">
-        <select id="model-select">
-            <option value="deepseek-flash" selected>deepseek-flash</option>
-            <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-        </select>
+        <input type="password" id="api-key" placeholder="粘贴 API Key" onblur="handleApiKeyBlur()">
     </div>
 
     <div class="control-group">
@@ -177,7 +173,7 @@
             <p>请在左侧上传您的课堂转录文本或录音文稿，点击“开始专业整理”即可获得排版精美的学术笔记。</p>
             <hr>
             <blockquote>
-                <p><strong>版本更新说明 (V28.1 DeepSeek)：</strong><br>
+                <p><strong>版本更新说明 (V28.1)：</strong><br>
                 1. <strong>渲染引擎重构</strong>：支持 HTML 混合渲染，完美呈现颜色标题。<br>
                 2. <strong>表格规范化</strong>：移除不规范的“模拟空行”，采用标准严谨的学术表格结构。<br>
                 3. <strong>视觉增强</strong>：集成 GitHub Markdown 样式基准，优化 PDF 导出清晰度。</p>
@@ -192,6 +188,7 @@
     let originalFileName = "学术笔记";
     let progressTimer = null;
     const WORDS_PER_PAGE = 500;
+    const DEFAULT_MODEL = "deepseek-flash";
     const CONFIG_API_KEY = (typeof SMART_NOTES_CONFIG !== 'undefined' && SMART_NOTES_CONFIG.apiKey) ? SMART_NOTES_CONFIG.apiKey : "";
     const CONFIG_API_BASE_URL = ((typeof SMART_NOTES_CONFIG !== 'undefined' && SMART_NOTES_CONFIG.apiBaseUrl) ? SMART_NOTES_CONFIG.apiBaseUrl : "https://api.deepseek.com").replace(/\/+$/, '');
     const USING_LOCAL_PROXY = CONFIG_API_BASE_URL.startsWith("/");
@@ -200,13 +197,6 @@
         const headers = { 'Content-Type': 'application/json' };
         if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
         return headers;
-    }
-
-    function setDeepSeekFallbackModels() {
-        const select = document.getElementById('model-select');
-        select.innerHTML = '';
-        select.add(new Option('deepseek-flash', 'deepseek-flash', true, true));
-        select.add(new Option('deepseek-v4-pro', 'deepseek-v4-pro'));
     }
 
     // 预处理输入：清理不可见字符
@@ -254,59 +244,14 @@
         // 使用 smart_notes_server.py 时，浏览器端会收到 apiBaseUrl=/v1，真实 Key 由本地代理持有。
         if (USING_LOCAL_PROXY) {
             document.getElementById('api-key').placeholder = "本地代理已读取 config.js";
-            autoLoadModels();
         } else if (CONFIG_API_KEY) {
             document.getElementById('api-key').value = CONFIG_API_KEY;
-            autoLoadModels();
         }
     };
 
     function handleApiKeyBlur() {
         const key = document.getElementById('api-key').value.trim();
-        if (key.length >= 10) showStatus("API Key 已就绪，正在读取模型列表", "success");
-        autoLoadModels();
-    }
-
-    async function autoLoadModels() {
-        const apiKey = document.getElementById('api-key').value.trim();
-        const select = document.getElementById('model-select');
-        if (!USING_LOCAL_PROXY && (!apiKey || apiKey.length < 10)) return;
-
-        const previousModel = select.value;
-        select.innerHTML = '<option value="">模型加载中...</option>';
-
-        try {
-            const response = await fetch(`${CONFIG_API_BASE_URL}/models`, {
-                headers: getApiHeaders(apiKey)
-            });
-            const data = await response.json();
-            if (!response.ok || data.error) {
-                throw new Error(data?.error?.message || data?.message || `HTTP ${response.status}`);
-            }
-
-            const models = Array.isArray(data.data) ? data.data
-                : Array.isArray(data.models) ? data.models
-                : Array.isArray(data) ? data
-                : [];
-
-            select.innerHTML = '';
-            for (const model of models) {
-                const id = typeof model === 'string' ? model : (model?.id || model?.name || '');
-                if (!id) continue;
-                select.add(new Option(model?.display_name || model?.displayName || id, id));
-            }
-
-            if (select.options.length === 0) {
-                setDeepSeekFallbackModels();
-            } else if ([...select.options].some(option => option.value === previousModel)) {
-                select.value = previousModel;
-            } else if ([...select.options].some(option => option.value === 'deepseek-flash')) {
-                select.value = 'deepseek-flash';
-            }
-        } catch (error) {
-            setDeepSeekFallbackModels();
-            showStatus(`模型列表读取失败：${error.message}。已保留 DeepSeek 默认模型，可继续尝试。`, "error");
-        }
+        if (key.length >= 10) showStatus("API Key 已就绪", "success");
     }
 
     document.getElementById('file-input').addEventListener('change', async (e) => {
@@ -332,7 +277,6 @@
 
     async function processNotes() {
         const apiKey = document.getElementById('api-key').value.trim();
-        const modelName = document.getElementById('model-select').value;
         const domain = document.getElementById('domain-select').value;
         const courseName = document.getElementById('course-name').value.trim();
         const custom = document.getElementById('custom-req').value;
@@ -392,7 +336,7 @@ ${preprocessedContent.substring(0, 1000000)}
                 method: 'POST',
                 headers: getApiHeaders(apiKey),
                 body: JSON.stringify({
-                    model: modelName,
+                    model: DEFAULT_MODEL,
                     messages: [
                         {
                             role: 'system',
@@ -414,14 +358,14 @@ ${preprocessedContent.substring(0, 1000000)}
                 data = await response.json();
             } catch (parseError) {
                 const raw = await response.text().catch(() => '');
-                throw new Error(`DeepSeek 返回了无法解析的响应（HTTP ${response.status}）。${raw.slice(0, 300)}`);
+                throw new Error(`返回了无法解析的响应（HTTP ${response.status}）。${raw.slice(0, 300)}`);
             }
 
-            console.log('DeepSeek 原始响应：', data);
+            console.log('原始响应：', data);
 
             if (!response.ok || data.error) {
                 const msg = data?.error?.message || data?.message || `HTTP ${response.status}`;
-                throw new Error(`DeepSeek API 错误：${msg}`);
+                throw new Error(`API 错误：${msg}`);
             }
 
             const choice = data?.choices?.[0];
@@ -431,7 +375,7 @@ ${preprocessedContent.substring(0, 1000000)}
             if (!rawOutput) {
                 const reason = choice?.finish_reason || '未知';
                 const details = JSON.stringify(data).slice(0, 1200);
-                throw new Error(`未收到有效的模型文本。finish_reason=${reason}。请按 F12 查看 Console 中的“DeepSeek 原始响应”。响应摘要：${details}`);
+                throw new Error(`未收到有效的文本。finish_reason=${reason}。请按 F12 查看 Console 中的“原始响应”。响应摘要：${details}`);
             }
 
             finalMarkdown = postprocessOutputText(rawOutput);
