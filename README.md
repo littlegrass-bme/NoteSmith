@@ -124,6 +124,7 @@ Prompt Engineering
 
 NoteSmith uses OpenAI-compatible endpoints, so you may use your own compatible provider. [OrcaRouter](https://www.orcarouter.ai/) is also supported as an optional provider; set `apiBaseUrl` to `https://api.orcarouter.ai/v1` and use your own OrcaRouter API key.  
 NoteSmith 使用 OpenAI-compatible 接口，因此可以自行配置兼容服务商。也可选择使用 [OrcaRouter](https://www.orcarouter.ai/)；将 `apiBaseUrl` 设置为 `https://api.orcarouter.ai/v1`，并填写自己的 OrcaRouter API Key 即可。
+参考 API：[OrcaRouter 参考 API](https://www.orcarouter.ai/ref/ref_24a8d1970c1c2ac4d810)
 
 如有需要，也可以自行添加特殊 Prompt 来满足个性化整理需求。
 
