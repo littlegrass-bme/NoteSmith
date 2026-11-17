@@ -50,11 +50,21 @@ def load_config():
     merged = {**base, **{k: v for k, v in local.items() if v}}
 
     if not merged.get("apiBaseUrl"):
-        raise RuntimeError("config.js 里没有 apiBaseUrl")
+        env_base = os.environ.get("SMART_NOTES_API_BASE", "").strip()
+        if env_base:
+            merged["apiBaseUrl"] = env_base
+    if not merged.get("apiBaseUrl"):
+        raise RuntimeError(
+            "没有可用的 apiBaseUrl。请在 config.js 或 config.local.js 里填 apiBaseUrl，"
+            "通常形如 https://api.example.com/v1 ；也可以设环境变量 SMART_NOTES_API_BASE。"
+        )
     # 和 DSH 一样支持从环境变量取 Key，三者优先级：本地文件 > config.js > 环境变量。
     # 没配 Key 不算错误：服务照常起来，页面输入框留空，用户可以手填，
     # 也可以在 config.local.js 或环境变量里补上后重启。
-    api_key = merged.get("apiKey") or os.environ.get("SHANGHAITECH_API_KEY", "").strip()
+    api_key = (
+        merged.get("apiKey")
+        or os.environ.get("SMART_NOTES_API_KEY", "").strip()
+    )
     return {
         "api_base_url": merged["apiBaseUrl"].rstrip("/"),
         "api_key": api_key,
@@ -196,7 +206,7 @@ class SmartNotesHandler(http.server.SimpleHTTPRequestHandler):
         # 免得前端每次都走失败分支。
         payload = json.dumps({
             "object": "list",
-            "data": [{"id": MODEL_ID, "object": "model", "owned_by": "shanghaitech"}],
+            "data": [{"id": MODEL_ID, "object": "model", "owned_by": "custom"}],
         }).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -217,7 +227,7 @@ class SmartNotesHandler(http.server.SimpleHTTPRequestHandler):
             payload = json.dumps({
                 "error": {
                     "message": "本地服务没有读到 API Key：请在 config.local.js 填 apiKey，"
-                               "或设置环境变量 SHANGHAITECH_API_KEY，然后重启服务。"
+                               "或设置环境变量 SMART_NOTES_API_KEY，然后重启服务。"
                 }
             }).encode("utf-8")
             self.send_response(401)
@@ -326,7 +336,7 @@ def run():
             print("已从 config.local.js 读到 API Key，页面会自动填充。")
         else:
             print("未读到 API Key：页面输入框留空，请在 config.local.js 填 apiKey")
-            print("或设置环境变量 SHANGHAITECH_API_KEY 后重启。")
+            print("或设置环境变量 SMART_NOTES_API_KEY 后重启。")
         print("关闭窗口即停止服务。")
         # 双击快捷方式时自动打开浏览器；设置 SMART_NOTES_NO_BROWSER=1 可关闭。
         if os.environ.get("SMART_NOTES_NO_BROWSER", "").strip() != "1":

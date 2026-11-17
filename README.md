@@ -115,12 +115,32 @@ Prompt Engineering
 
 ### 1️⃣ Configure API ｜ 配置 API
 
-在 `config.js` 中填入自己的：
+在 `config.js` 中填入你自己的配置：
 
-* API Key
-* API URL
+* `apiBaseUrl`：任意 OpenAI 兼容接口地址，通常以 `/v1` 结尾，例如 `https://api.deepseek.com/v1`
+* `apiKey`：你的 API Key
+* `model`：模型 id，按你的服务商填写
 
-并根据指引在页面中选择模型、填写课程 / 会议相关信息。
+仓库里的 `config.js` 是公开模板，`apiBaseUrl` 和 `apiKey` 都是空字符串，需要自己填。
+如果不想让 Key 出现在被 Git 跟踪的文件里，可以新建 `config.local.js`（已在 `.gitignore` 中），
+它的字段会覆盖 `config.js` 的同名字段：
+
+```javascript
+const SMART_NOTES_CONFIG = {
+    apiBaseUrl: "https://api.example.com/v1",
+    apiKey: "your-key-here",
+    model: "your-model-id"
+};
+```
+
+也可以用环境变量，避免任何文件里出现 Key：
+
+* `SMART_NOTES_API_BASE`：接口地址
+* `SMART_NOTES_API_KEY`：API Key
+
+启动后页面会自动填入 Key 并加载模型列表；配置为空时输入框保持空白。
+
+然后根据指引在页面中选择模型、填写课程 / 会议相关信息。
 
 NoteSmith uses OpenAI-compatible endpoints, so you may use your own compatible provider. [OrcaRouter](https://www.orcarouter.ai/) is also supported as an optional provider; set `apiBaseUrl` to `https://api.orcarouter.ai/v1` and use your own OrcaRouter API key.  
 NoteSmith 使用 OpenAI-compatible 接口，因此可以自行配置兼容服务商。也可选择使用 [OrcaRouter](https://www.orcarouter.ai/)；将 `apiBaseUrl` 设置为 `https://api.orcarouter.ai/v1`，并填写自己的 OrcaRouter API Key 即可。
@@ -135,7 +155,16 @@ NoteSmith 使用 OpenAI-compatible 接口，因此可以自行配置兼容服务
 python smart_notes_server.py
 ```
 
-然后在浏览器打开终端显示的本地地址。
+默认监听 `127.0.0.1:8000`，端口被占用时会自动往后试（8001、8002…）。
+要指定端口，用参数或环境变量：
+
+```bash
+python smart_notes_server.py 9000
+# 或
+set SMART_NOTES_PORT=9000 && python smart_notes_server.py
+```
+
+启动后浏览器会自动打开，终端也会打印实际地址。服务只监听本机，不会暴露到局域网。
 
 ---
 
